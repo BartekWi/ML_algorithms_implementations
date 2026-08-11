@@ -54,3 +54,29 @@ class KnnClassifier:
                 preds.append(tied[0])
         return preds
 #-------------------------------------------------------------------------------------------
+class LinearRegression:
+    def fit(self,X,y):
+        self.X=np.asarray(X)
+        self.y=np.asarray(y)
+        self.theta=np.linalg.inv(X.T@X)@X.T@y
+    def predict(self,X):
+        X=np.asarray(X.copy())
+        return X@np.reshape(self.theta,(self.theta.shape[0],1))
+#-------------------------------------------------------------------------------------------
+class Locally_weighted_LR:
+    def __init__(self,tau=0.1):
+        self.tau=tau
+    def fit(self,X,y):
+        self.X=np.asarray(X)
+        self.y=np.asarray(y)
+    def predict(self,X):
+        m,n=self.X.shape
+        X=np.asarray(X)
+        l=X.shape[0]
+        diff=np.reshape(X,(-1,l,n))-np.reshape(self.X,(m,-1,n))
+        w=np.exp(-np.linalg.norm(diff,ord=2,axis=2)**2/(2*self.tau**2))#mxl
+        W=np.apply_along_axis(np.diag,axis=0,arr=w).T #lxmxm
+        XT_W=self.X.T@W
+        theta = np.linalg.solve(XT_W @ self.X, np.reshape(XT_W @ self.y,(l,n,1))).squeeze()#lxn
+        return np.sum(X*theta,axis=1)#lx1
+#-------------------------------------------------------------------------------------------
