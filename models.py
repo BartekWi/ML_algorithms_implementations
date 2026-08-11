@@ -80,3 +80,69 @@ class Locally_weighted_LR:
         theta = np.linalg.solve(XT_W @ self.X, np.reshape(XT_W @ self.y,(l,n,1))).squeeze()#lxn
         return np.sum(X*theta,axis=1)#lx1
 #-------------------------------------------------------------------------------------------
+class GLM:#Based on exponential  distribution
+    def __init__(self,eps=1e-5,max_iter=100):
+        self.eps=eps
+        self.max_iter=max_iter
+    def fit(self,X,y):
+        self.X=np.asarray(X)
+        self.y=np.asarray(y)
+        m,n=self.X.shape
+        self.theta=np.zeros(n)-0.1
+        prev_theta=self.theta+2*self.eps
+        it=0
+        while np.linalg.norm(self.theta-prev_theta,ord=1)>=self.eps and it<self.max_iter:
+            it+=1
+            prev_theta=self.theta.copy()
+            X_theta=self.X@self.theta
+            
+            gradient=self.X.T@(self.y+1/(X_theta))
+            W=np.diag(1/(X_theta)**2)
+            hessian=-X.T@W@X
+            self.theta=self.theta-np.linalg.inv(hessian)@gradient
+        print(f"Converged in {it} iterations")
+    def predict(self,X):
+        X=np.asarray(X)
+        return -1/(X@self.theta)
+#-------------------------------------------------------------------------------------------
+class SoftMax:
+    def __init__(self,eps=1e-5,max_iter=100,lr=0.1,l2=0):
+        self.eps=eps
+        self.max_iter=max_iter
+        self.lr=lr
+        self.l2=l2
+    def fit(self,X,y):
+        self.X=np.asarray(X)
+        self.y=np.asarray(y)
+        m,n=self.X.shape
+        self.classes=np.unique(y)
+        self.n_classes=len(self.classes)
+        self.theta={c:np.zeros(n) for c in self.classes}
+        
+        it=0
+        max_diff=2*self.eps
+        while max_diff>=self.eps and it<self.max_iter:
+            it+=1
+            prev_theta=self.theta.copy()
+            max_diff=0
+            prev_theta=self.theta.copy()
+            for c in self.classes:
+                theta_c=self.theta[c]
+                P_c=np.exp(X@theta_c)/np.sum([np.exp(X@prev_theta[j])for j in self.classes],axis=0)       
+                self.theta[c]=theta_c-self.lr*((P_c-(y==c).astype('int32'))@self.X/m+self.l2*self.theta[c])
+                diff=np.linalg.norm(self.theta[c]-prev_theta[c],ord=1)
+                if diff>max_diff:
+                    max_diff=diff
+            
+            #print(max_diff)
+        print(f"total iterations: {it}")
+    def predict(self,X):
+        m,n=X.shape
+        probs=np.zeros((m,self.n_classes))
+        for i,c in enumerate(self.classes):
+            theta_c=self.theta[c]    
+            P_c=np.exp(X@theta_c)/np.sum([np.exp(X@self.theta[j])for j in self.classes],axis=0)
+            probs[:,i]=P_c
+        results=np.argmax(probs,axis=1)
+        return self.classes[results]
+#-------------------------------------------------------------------------------------------
