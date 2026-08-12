@@ -306,3 +306,27 @@ class NaiveBayes:
         y0=np.sum(X*np.log(self.p_xy0),axis=1)+np.log(self.p_y0)
         return np.argmax(np.column_stack((y0, y1)),axis=1)
 #-------------------------------------------------------------------------------------------
+class GDA:
+    def fit(self,X,y):
+        self.X=np.asarray(X)
+        self.y=np.asarray(y)
+        m,n=self.X.shape
+        self.classes=np.unique(y)
+        self.n_classes=len(self.classes)
+        self.mus=np.zeros((self.n_classes,n))
+        self.covs = np.zeros((self.n_classes, n, n))
+        self.phis=np.zeros(self.n_classes)
+        for i,c in enumerate(self.classes):
+            self.phis[i]=len(y[y==c])/m
+            self.mus[i,:]=np.mean(self.X[y==c],axis=0)
+            self.covs[i, :, :] = np.cov(self.X[y==c].T, bias=True)
+    def predict(self,X):
+        X=np.asarray(X)
+        probs=np.zeros((X.shape[0],self.n_classes))
+        for i,c in enumerate(self.classes):
+            cov = self.covs[i]
+            term_1 = -0.5 * X.shape[1] * np.log(2 * np.pi) - 0.5 * np.log(np.linalg.det(cov))
+            diff = X - self.mus[i]
+            term_2 = -0.5 * np.sum(diff@np.linalg.inv(cov) * diff, axis=1)
+            probs[:,i]=term_1+term_2+np.log(self.phis[i])
+        return self.classes[np.argmax(probs,axis=1)]
