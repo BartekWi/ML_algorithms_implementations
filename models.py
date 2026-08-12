@@ -146,3 +146,74 @@ class SoftMax:
         results=np.argmax(probs,axis=1)
         return self.classes[results]
 #-------------------------------------------------------------------------------------------
+class Node:
+    def __init__(self,feature=None,threshold=None,left=None,right=None,*,value=None):
+        self.feature=feature
+        self.threshold=threshold
+        self.left=left
+        self.right=right
+        self.value=value
+    def IsLeaf(self):
+        return self.value != None
+class DecisionTree:
+    def __init__(self,max_depth=50,min_samples=10,n_features=None,random_state=42):
+        self.max_depth=max_depth
+        self.min_samples=min_samples
+        self.n_features=n_features
+        self.root=None
+        self.rng=np.random.RandomState(random_state)
+    def fit(self,X,y):
+        self.n_features=X.shape[1] if not self.n_features else min(X.shape[1],self.n_features)
+        self.X=np.asarray(X)
+        self.y=np.asarray(y)
+        self.root=self._grow_tree(self.X,self.y)
+    def _grow_tree(self,X,y,depth=0):
+        m,n=X.shape
+        classes,counts=np.unique(y,return_counts=True)
+        n_classes=len(classes)
+        if depth>=self.max_depth or self.min_samples>len(y) or n_classes==1:
+            return Node(value=classes[np.argmax(counts)])
+        feature_idxs=self.rng.choice(n,self.n_features,replace=False)
+        best_feature,best_thr=self._optimal_split(X,y,feature_idxs)
+        l_idxs,r_idxs=self._split(X[:,best_feature],best_thr)
+        left=self._grow_tree(X[l_idxs],y[l_idxs],depth+1)
+        right=self._grow_tree(X[r_idxs],y[r_idxs],depth+1)
+        return Node(best_feature,best_thr,left,right)
+    def _optimal_split(self,X,y,feature_idxs):
+        best_ig=-1
+        feature_idx,threshold=None,None
+        for idx in feature_idxs:
+            X_col=X[:,idx]
+            thresholds=np.unique(X_col)
+            for thr in thresholds:
+                ig=self._calculate_IG(X_col,y,thr)
+                if ig>best_ig:
+                    best_ig=ig
+                    feature_idx=idx
+                    threshold=thr
+        return feature_idx,threshold
+    def _entropy(self,y):
+            c_sum=0
+            for c in np.unique(y):
+                p_c=len(y[y==c])/len(y)
+                c_sum+=p_c*np.log2(p_c)
+            return -c_sum
+    def _calculate_IG(self,X,y,threshold):      
+        parent_e=self._entropy(y)
+        l_idxs,r_idxs=self._split(X,threshold)
+        l_e=self._entropy(y[l_idxs])
+        r_e=self._entropy(y[r_idxs])
+        n_l=len(l_idxs)
+        n_r=len(r_idxs)
+        return parent_e-(n_l*l_e+n_r*r_e)/(n_l+n_r)
+    def _split(self,X,threshold):
+        return np.argwhere(X<=threshold).flatten(), np.argwhere(X>threshold).flatten()
+    def _check_tree(self,x,node):
+        if node.IsLeaf():
+            return node.value
+        if x[node.feature]<=node.threshold:
+            return self._check_tree(x,node.left)
+        return self._check_tree(x,node.right)
+    def predict(self,X):
+        return np.array([self._check_tree(x,self.root) for x in X])       
+#-------------------------------------------------------------------------------------------
