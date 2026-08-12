@@ -217,3 +217,71 @@ class DecisionTree:
     def predict(self,X):
         return np.array([self._check_tree(x,self.root) for x in X])       
 #-------------------------------------------------------------------------------------------
+class Node:
+    def __init__(self,feature=None,threshold=None,left=None,right=None,*,value=None):
+        self.feature=feature
+        self.threshold=threshold
+        self.left=left
+        self.right=right
+        self.value=value
+    def IsLeaf(self):
+        return self.value != None
+class RegressionTree:
+    def __init__(self,max_depth=50,min_samples=10,n_features=None,random_state=42):
+        self.max_depth=max_depth
+        self.min_samples=min_samples
+        self.n_features=n_features
+        self.root=None
+        self.rng=np.random.RandomState(random_state)
+    def fit(self,X,y):
+        self.n_features=X.shape[1] if not self.n_features else min(X.shape[1],self.n_features)
+        self.X=np.asarray(X)
+        self.y=np.asarray(y)
+        self.root=self._grow_tree(self.X,self.y)
+    def _grow_tree(self,X,y,depth=0):
+        m,n=X.shape
+        if depth>=self.max_depth or self.min_samples>len(y) or len(np.unique(y)) == 1:
+            return Node(value=np.mean(y))
+        feature_idxs=self.rng.choice(n,self.n_features,replace=False)
+        best_feature,best_thr=self._optimal_split(X,y,feature_idxs)
+        l_idxs,r_idxs=self._split(X[:,best_feature],best_thr)
+        left=self._grow_tree(X[l_idxs],y[l_idxs],depth+1)
+        right=self._grow_tree(X[r_idxs],y[r_idxs],depth+1)
+        return Node(best_feature,best_thr,left,right)
+    def _optimal_split(self,X,y,feature_idxs):
+        best_ss=-1
+        feature_idx,threshold=None,None
+        for idx in feature_idxs:
+            X_col=X[:,idx]
+            thresholds=np.unique(X_col)
+            for thr in thresholds:
+                phi=self._calculate_phi(X_col,y,thr)
+                if phi>best_ss:
+                    best_ss=phi
+                    feature_idx=idx
+                    threshold=thr
+        return feature_idx,threshold
+    def _ss(self,y):
+        if len(y)==0:
+            return 0
+        return np.sum((y-np.mean(y))**2)
+    def _calculate_phi(self,X,y,threshold): 
+        
+        parent_ss=self._ss(y)
+        l_idxs,r_idxs=self._split(X,threshold)
+        if len(l_idxs) == 0 or len(r_idxs) == 0:
+            return -1
+        l_ss=self._ss(y[l_idxs])
+        r_ss=self._ss(y[r_idxs])
+        return parent_ss-l_ss-r_ss
+    def _split(self,X,threshold):
+        return np.argwhere(X<=threshold).flatten(), np.argwhere(X>threshold).flatten()
+    def _check_tree(self,x,node):
+        if node.IsLeaf():
+            return node.value
+        if x[node.feature]<=node.threshold:
+            return self._check_tree(x,node.left)
+        return self._check_tree(x,node.right)
+    def predict(self,X):
+        return np.array([self._check_tree(x,self.root) for x in X])       
+#-------------------------------------------------------------------------------------------
