@@ -175,6 +175,8 @@ class DecisionTree:
             return Node(value=classes[np.argmax(counts)])
         feature_idxs=self.rng.choice(n,self.n_features,replace=False)
         best_feature,best_thr=self._optimal_split(X,y,feature_idxs)
+        if best_feature is None:
+            return Node(value=classes[np.argmax(counts)])
         l_idxs,r_idxs=self._split(X[:,best_feature],best_thr)
         left=self._grow_tree(X[l_idxs],y[l_idxs],depth+1)
         right=self._grow_tree(X[r_idxs],y[r_idxs],depth+1)
@@ -201,6 +203,8 @@ class DecisionTree:
     def _calculate_IG(self,X,y,threshold):      
         parent_e=self._entropy(y)
         l_idxs,r_idxs=self._split(X,threshold)
+        if len(l_idxs) == 0 or len(r_idxs) == 0:
+            return -1
         l_e=self._entropy(y[l_idxs])
         r_e=self._entropy(y[r_idxs])
         n_l=len(l_idxs)
@@ -234,7 +238,7 @@ class RegressionTree:
         self.root=None
         self.rng=np.random.RandomState(random_state)
     def fit(self,X,y):
-        self.n_features=X.shape[1] if not self.n_features else min(X.shape[1],self.n_features)
+        self.n_features=X.shape[1] if not self.n_features else max(1,min(X.shape[1],self.n_features))
         self.X=np.asarray(X)
         self.y=np.asarray(y)
         self.root=self._grow_tree(self.X,self.y)
@@ -283,5 +287,5 @@ class RegressionTree:
             return self._check_tree(x,node.left)
         return self._check_tree(x,node.right)
     def predict(self,X):
-        return np.array([self._check_tree(x,self.root) for x in X])       
+        return np.array([self._check_tree(x,self.root) for x in X])          
 #-------------------------------------------------------------------------------------------
