@@ -289,3 +289,20 @@ class RegressionTree:
     def predict(self,X):
         return np.array([self._check_tree(x,self.root) for x in X])          
 #-------------------------------------------------------------------------------------------
+class NaiveBayes:
+    def fit(self,X,y):
+        self.X=np.asarray(X)
+        self.y=np.asarray(y)
+        m,n=self.X.shape
+        y1_count=np.sum(X[y==1])
+        y0_count=np.sum(X[y==0])
+        self.p_y1=len(y[y==1])/m
+        self.p_y0=len(y[y==0])/m
+        self.p_xy1=(np.sum(X[y==1],axis=0)+1)/(y1_count+n)
+        self.p_xy0=(np.sum(X[y==0],axis=0)+1)/(y0_count+n)
+    def predict(self,X):
+        X=np.asarray(X)
+        y1=np.sum(X*np.log(self.p_xy1),axis=1)+np.log(self.p_y1)
+        y0=np.sum(X*np.log(self.p_xy0),axis=1)+np.log(self.p_y0)
+        return np.argmax(np.column_stack((y0, y1)),axis=1)
+#-------------------------------------------------------------------------------------------
