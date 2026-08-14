@@ -385,3 +385,26 @@ def K_means(x,k,eps,max_iter):
     if np.abs(J - J_prev) < eps:
         print(f'Algorithm converged in {it} iterations')
     return c,mu
+#-------------------------------------------------------------------------------------------
+class ICA:
+    def unmixer(self,X):
+        M, N = X.shape
+        W = np.eye(N)
+    
+        anneal = [0.1 , 0.1, 0.1, 0.05, 0.05, 0.05, 0.02, 0.02, 0.01 , 0.01, 0.005, 0.005, 0.002, 0.002, 0.001, 0.001]
+        for lr in anneal:
+            print(lr)
+            rand = np.random.permutation(range(M))
+            for i in rand:
+                x = X[i]
+                W = self._update_W(W, x, lr)
+    
+        return W
+    def _update_W(self,W, x, learning_rate):
+        def sign(z):
+            return (z>0).astype('int32')-(z<0).astype('int32')
+        n=W.shape[0]
+        wx=W@np.reshape(x,(n,1))
+        updated_W=W+learning_rate*(np.linalg.inv(W.T)-sign(wx)@np.reshape(x,(1,n)))
+        
+        return updated_W
