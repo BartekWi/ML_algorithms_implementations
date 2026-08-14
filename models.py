@@ -331,7 +331,7 @@ class GDA:
             probs[:,i]=term_1+term_2+np.log(self.phis[i])
         return self.classes[np.argmax(probs,axis=1)]
 #-------------------------------------------------------------------------------------------
-class AdaBoost:
+class AdaBoost:#Only for binary
     def __init__(self,classifier,n_classifiers):
         self.classifier=classifier
         self.n_classifiers=n_classifiers
@@ -359,3 +359,29 @@ class AdaBoost:
         X=np.asarray(X)
         all_preds=np.array([alpha*clf.predict(X) for alpha,clf in zip(self.alphas,self.classifiers)])
         return np.sign(np.sum(all_preds,axis=0))
+#-------------------------------------------------------------------------------------------
+def K_means(x,k,eps,max_iter):
+    x_copy=x.copy()
+    m,n=x_copy.shape
+    idx=np.random.choice(range(m),k)
+    mu=x_copy[idx].astype(float)
+    c=np.zeros(m)
+    J=0.0
+    J_prev=1.0
+    it=0
+    while np.abs(J - J_prev) >= eps and max_iter>it:
+        J_prev=J
+        J=0.0 
+        c=np.argmin(np.array([np.linalg.norm(x_copy-mu[j],ord=2,axis=1)**2 for j in range(k)]).T,axis=1)
+        for j in range(mu.shape[0]):          
+            if not (c==j).any():
+                mu[j]=x_copy[np.random.randint(m)]
+            else:
+                mu[j]=np.mean(x_copy[c==j],axis=0)
+            J+=np.sum(np.linalg.norm(x_copy[c==j]-mu[j],ord=2,axis=1)**2)
+        it+=1
+        if it%20==0:
+            print(J)
+    if np.abs(J - J_prev) < eps:
+        print(f'Algorithm converged in {it} iterations')
+    return c,mu
