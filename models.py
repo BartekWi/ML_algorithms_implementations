@@ -330,3 +330,32 @@ class GDA:
             term_2 = -0.5 * np.sum(diff@np.linalg.inv(cov) * diff, axis=1)
             probs[:,i]=term_1+term_2+np.log(self.phis[i])
         return self.classes[np.argmax(probs,axis=1)]
+#-------------------------------------------------------------------------------------------
+class AdaBoost:
+    def __init__(self,classifier,n_classifiers):
+        self.classifier=classifier
+        self.n_classifiers=n_classifiers
+        self.classifiers=[]
+        self.alphas=[]
+    def fit(self,X,y):
+        self.X=np.asarray(X)
+        self.y=np.asarray(y)
+        m,n=self.X.shape
+        self.weights=np.ones(m)/m       
+        for _ in range(self.n_classifiers):
+            clf=copy(self.classifier)
+            idxs = np.random.choice(m, size=m, replace=True, p=self.weights)
+            X_sampled = self.X[idxs]
+            y_sampled = self.y[idxs]
+            clf.fit(X_sampled,y_sampled)
+            preds=clf.predict(self.X)
+            error=np.sum(self.weights[preds!=self.y])
+            alpha=0.5*np.log((1-error+ 1e-10)/(error+ 1e-10))
+            self.alphas.append(alpha)
+            self.weights=self.weights*np.exp(-alpha*preds*self.y)
+            self.weights=self.weights/np.sum(self.weights)
+            self.classifiers.append(clf)
+    def predict(self,X):
+        X=np.asarray(X)
+        all_preds=np.array([alpha*clf.predict(X) for alpha,clf in zip(self.alphas,self.classifiers)])
+        return np.sign(np.sum(all_preds,axis=0))
