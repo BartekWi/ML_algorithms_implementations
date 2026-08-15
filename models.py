@@ -408,3 +408,18 @@ class ICA:
         updated_W=W+learning_rate*(np.linalg.inv(W.T)-sign(wx)@np.reshape(x,(1,n)))
         
         return updated_W
+#-------------------------------------------------------------------------------------------
+class PCA:
+    def fit(self,X,k=3,p=None):
+        cov=np.cov(X,rowvar=False)
+        e_vals,e_vecs=np.linalg.eigh(cov)# eigh since cov.T=cov
+        self.e_vals,self.e_vecs=e_vals[::-1],e_vecs[:,::-1]
+        self.evc=self.e_vals/np.sum(self.e_vals)
+        self.evc_cum_sum=np.cumsum(self.evc)
+        if p!=None:
+            self.min_k=(np.argwhere((self.evc_cum_sum)>=p).ravel()[0])+1
+            k=self.min_k
+        self.W=self.e_vecs[:, :k]
+               
+    def transform(self,X):
+        return X.dot(self.W)
